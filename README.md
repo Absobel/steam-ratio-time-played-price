@@ -7,3 +7,4 @@ Faut mettre ça dans un terminal.
 
 # TODO
 - [ ] Tenter au lieu de faire un appel toutes les deux sec de faire en sorte de, quand l'api renvoie null, de faire un appel toutes les 10 (ou autre nombre) sec jusqu'à ce que ça remarche.
+- [ ] Faire en sorte que le résultat soit envoyé dans un fichier (c'est simple à faire mais flemme)
