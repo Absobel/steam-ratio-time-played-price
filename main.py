@@ -1,4 +1,4 @@
-from steam import Steam
+import steam
 from decouple import config
 import json
 from currency_converter import CurrencyConverter
@@ -7,7 +7,7 @@ import pandas as pd
 
 # SETUP
 KEY = config("STEAM_API_KEY")
-steam = Steam(KEY)
+stm = steam.Steam(KEY)
 
 STEAM_USER = 76561198142605500      # Le mien  (325+ jeux)
 #STEAM_USER = 76561199038321447      # Celui de Anarof  (18 jeux)
@@ -21,7 +21,7 @@ JEUX_NON_JOUES = True
 
 
 # Get all games owned by the user
-games = steam.users.get_owned_games(STEAM_USER)
+games = stm.users.get_owned_games(STEAM_USER)
 
 # Séparer les jeux joués et non joués
 liste = []
@@ -30,7 +30,7 @@ for game in games["games"]:
 
 # à supprimer quand fini de tester
 f = open("games.json", "w")
-info_app = steam.apps.get_app_details(liste[0][0])
+info_app = stm.apps.get_app_details(liste[0][0])
 dico = json.loads(info_app)
 f.write(json.dumps(dico, indent=4))
 f.close()
@@ -40,7 +40,7 @@ print("done")
 with alive_bar(len(liste)) as bar:
     for i,game in enumerate(liste):
         try:
-            info_app = steam.apps.get_app_details(game[0])
+            info_app = stm.apps.get_app_details(game[0])
             dico = json.loads(info_app)
             if dico[str(game[0])]["data"]["is_free"] == False:
                 try:
