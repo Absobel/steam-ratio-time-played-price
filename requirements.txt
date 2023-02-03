@@ -1,7 +1,5 @@
 alive_progress==3.0.1
 currency_converter==0.5.5
-CurrencyConverter==0.17.5
 pandas==1.5.3
 python-decouple==3.7
 python_steam_api==1.0.8
-steam==1.4.4
