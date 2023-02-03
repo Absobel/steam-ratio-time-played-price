@@ -4,6 +4,7 @@ import json
 from currency_converter import CurrencyConverter
 from alive_progress import alive_bar
 import pandas as pd
+import time
 
 # SETUP
 KEY = config("STEAM_API_KEY")
@@ -28,17 +29,10 @@ liste = []
 for game in games["games"]:
     liste.append([game["appid"], game["name"], game["playtime_forever"]])
 
-# à supprimer quand fini de tester
-f = open("games.json", "w")
-info_app = stm.apps.get_app_details(liste[0][0])
-dico = json.loads(info_app)
-f.write(json.dumps(dico, indent=4))
-f.close()
-print("done")
-
-
-with alive_bar(len(liste)) as bar:
+len_liste = len(liste)
+with alive_bar(len_liste) as bar:
     for i,game in enumerate(liste):
+        start = time.time()
         try:
             info_app = stm.apps.get_app_details(game[0])
             dico = json.loads(info_app)
@@ -54,6 +48,11 @@ with alive_bar(len(liste)) as bar:
             price = None
         liste[i].append(price)
         bar()
+        end = time.time()
+        if len_liste > 200:
+            while end - start < 2   :
+                time.sleep(0.1)
+                end = time.time()
 # liste : [appid, name, playtime_forever, price]
 
 liste_playtime0 = []
