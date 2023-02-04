@@ -12,6 +12,7 @@ stm = steam.Steam(KEY)
 
 STEAM_USER = 76561198142605500      # Le mien  (325+ jeux)
 #STEAM_USER = 76561199038321447      # Celui de Anarof  (18 jeux)
+#STEAM_USER = 76561198383805394      # Celui de feitan
 
 c = CurrencyConverter()
 pd.set_option('display.max_rows', None)
@@ -95,18 +96,20 @@ liste_a_afficher.append([])
 for game in liste_prix_inconnus:
     liste_a_afficher[3].append([game[1], "{:.2f}".format(game[2]/60)+"h"])
 
+f = open("result.txt", "w")
+
 if JEUX_NON_JOUES and len(liste_playtime0) > 0:
-    print("Jeux non joués")
-    print(pd.DataFrame(liste_a_afficher[0], columns=["Nom", "Prix"]))
-    print()
+    f.write("Jeux non joués\n")
+    f.write(str(pd.DataFrame(liste_a_afficher[0], columns=["Nom", "Prix"])))
+    f.write("\n\n")
 if len(liste) > 0:
-    print("Jeux joués")
-    print(pd.DataFrame(liste_a_afficher[1], columns=["Nom", "Temps de jeu", "Prix"]))
-    print()
+    f.write("Jeux joués\n")
+    f.write(str(pd.DataFrame(liste_a_afficher[1], columns=["Nom", "Temps de jeu", "Prix"])))
+    f.write("\n\n")
 if len(liste_prix_gratuits) > 0:
-    print("Jeux gratuits")
-    print(pd.DataFrame(liste_a_afficher[2], columns=["Nom", "Temps de jeu"]))
-    print()
+    f.write("Jeux gratuits\n")
+    f.write(str(pd.DataFrame(liste_a_afficher[2], columns=["Nom", "Temps de jeu"])))
+    f.write("\n\n")
 if len(liste_prix_inconnus) > 0:
-    print("Jeux dont le prix est inconnu")
-    print(pd.DataFrame(liste_a_afficher[3], columns=["Nom", "Temps de jeu"]))
+    f.write("Jeux dont le prix est inconnu\n")
+    f.write(str(pd.DataFrame(liste_a_afficher[3], columns=["Nom", "Temps de jeu"])))
