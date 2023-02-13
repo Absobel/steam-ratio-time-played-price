@@ -1,4 +1,5 @@
 result.txt
+monresult.txt
 *.json
 
 # Byte-compiled / optimized / DLL files

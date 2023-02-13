@@ -13,6 +13,10 @@ stm = steam.Steam(KEY)
 STEAM_USER = 76561198142605500      # Le mien  (325+ jeux)
 #STEAM_USER = 76561199038321447      # Celui de Anarof  (18 jeux)
 #STEAM_USER = 76561198383805394      # Celui de feitan
+#STEAM_USER = 76561198026300020      # Celui de Anno
+#STEAM_USER = 76561198831558703      # Celui de Nico
+#STEAM_USER = 76561198119301466      # Celui de Louis
+#STEAM_USER = 76561198263261820      # Celui d'Alexandre
 
 c = CurrencyConverter()
 pd.set_option('display.max_rows', None)
@@ -33,15 +37,14 @@ for game in games["games"]:
 len_liste = len(liste)
 with alive_bar(len_liste) as bar:
     for i,game in enumerate(liste):
-        start = time.time()
         try:
             info_app = stm.apps.get_app_details(game[0])
+            while info_app == "null":
+                time.sleep(10);
+                info_app = stm.apps.get_app_details(game[0])
             dico = json.loads(info_app)
             if dico[str(game[0])]["data"]["is_free"] == False:
-                try:
-                    price = c.convert(dico[str(game[0])]["data"]["price_overview"]["initial"] / 100, dico[str(game[0])]["data"]["price_overview"]["currency"], "EUR")
-                except:
-                    price = None
+                price = c.convert(dico[str(game[0])]["data"]["price_overview"]["initial"] / 100, dico[str(game[0])]["data"]["price_overview"]["currency"], "EUR")
             else:
                 price = 0
         except:
@@ -49,11 +52,6 @@ with alive_bar(len_liste) as bar:
             price = None
         liste[i].append(price)
         bar()
-        end = time.time()
-        if len_liste > 200:
-            while end - start < 2   :
-                time.sleep(0.1)
-                end = time.time()
 # liste : [appid, name, playtime_forever, price]
 
 liste_playtime0 = []
