@@ -44,10 +44,7 @@ with alive_bar(len_liste) as bar:
                 info_app = stm.apps.get_app_details(game[0])
             dico = json.loads(info_app)
             if dico[str(game[0])]["data"]["is_free"] == False:
-                try:
-                    price = c.convert(dico[str(game[0])]["data"]["price_overview"]["initial"] / 100, dico[str(game[0])]["data"]["price_overview"]["currency"], "EUR")
-                except:
-                    price = None
+                price = c.convert(dico[str(game[0])]["data"]["price_overview"]["initial"] / 100, dico[str(game[0])]["data"]["price_overview"]["currency"], "EUR")
             else:
                 price = 0
         except:
