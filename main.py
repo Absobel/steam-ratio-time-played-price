@@ -23,6 +23,7 @@ pd.set_option('display.max_rows', None)
 
 # Paramètres
 JEUX_NON_JOUES = True
+API_WAIT = True
 
 
 
@@ -37,11 +38,14 @@ for game in games["games"]:
 len_liste = len(liste)
 with alive_bar(len_liste) as bar:
     for i,game in enumerate(liste):
+        start = time.time()
         try:
             info_app = stm.apps.get_app_details(game[0])
-            while info_app == "null":
-                time.sleep(10);
-                info_app = stm.apps.get_app_details(game[0])
+            if API_WAIT:
+                while info_app == "null":
+                    print("API limit reached, waiting 10s")
+                    time.sleep(10);
+                    info_app = stm.apps.get_app_details(game[0])
             dico = json.loads(info_app)
             if dico[str(game[0])]["data"]["is_free"] == False:
                 price = c.convert(dico[str(game[0])]["data"]["price_overview"]["initial"] / 100, dico[str(game[0])]["data"]["price_overview"]["currency"], "EUR")
@@ -51,6 +55,11 @@ with alive_bar(len_liste) as bar:
             print(i, " : ", game[1])
             price = None
         liste[i].append(price)
+        end = time.time()
+        if len_liste > 200 and not API_WAIT:
+            while end - start < 1:
+                time.sleep(0.1)
+                end = time.time()
         bar()
 # liste : [appid, name, playtime_forever, price]
 
