@@ -57,7 +57,7 @@ with alive_bar(len_liste) as bar:
         liste[i].append(price)
         end = time.time()
         if len_liste > 200 and not API_WAIT:
-            while end - start < 1:
+            while end - start < 2:
                 time.sleep(0.1)
                 end = time.time()
         bar()
