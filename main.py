@@ -23,7 +23,7 @@ pd.set_option('display.max_rows', None)
 
 # Paramètres
 JEUX_NON_JOUES = True
-API_WAIT = True
+API_WAIT = False
 
 
 
@@ -103,7 +103,10 @@ liste_a_afficher.append([])
 for game in liste_prix_inconnus:
     liste_a_afficher[3].append([game[1], "{:.2f}".format(game[2]/60)+"h"])
 
-f = open("result.txt", "w")
+if STEAM_USER == 76561198142605500:
+    f = open("monresult.txt", "w")
+else:
+    f = open("result.txt", "w")
 
 if JEUX_NON_JOUES and len(liste_playtime0) > 0:
     f.write("Jeux non joués\n")
