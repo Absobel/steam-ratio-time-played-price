@@ -1,5 +1,7 @@
 result.txt
 monresult.txt
+thisenv
+
 *.json
 
 # Byte-compiled / optimized / DLL files

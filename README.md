@@ -9,3 +9,4 @@ Faut mettre ça dans un terminal.
 - [x] Tenter au lieu de faire un appel toutes les deux sec de faire en sorte de, quand l'api renvoie null, de faire un appel toutes les 10 (ou autre nombre) sec jusqu'à ce que ça remarche.
 - [x] Faire en sorte que le résultat soit envoyé dans un fichier (c'est simple à faire mais flemme)
 - [ ] Ajouter debugging (messages d'erreurs quand jeu prix inconnu)
+- [ ] Faire un truc pour la clef api et remettre le truc public

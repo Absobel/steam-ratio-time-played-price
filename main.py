@@ -44,7 +44,7 @@ with alive_bar(len_liste) as bar:
             if API_WAIT:
                 while info_app == "null":
                     print("API limit reached, waiting 10s")
-                    time.sleep(10);
+                    time.sleep(10)
                     info_app = stm.apps.get_app_details(game[0])
             dico = json.loads(info_app)
             if dico[str(game[0])]["data"]["is_free"] == False:
@@ -79,35 +79,50 @@ with alive_bar(len(liste)) as bar:
             liste_playtime0.append(game)
         bar()
 liste = [x for x in liste if x != None]
-liste.sort(key=lambda x: x[2]/x[3])
+liste.sort(key=lambda x: x[2]/x[3], reverse=True)
 liste_playtime0.sort(key=lambda x: x[3], reverse=True)
-liste_prix_gratuits.sort(key=lambda x: x[2])
-liste_prix_inconnus.sort(key=lambda x: x[2])
+liste_prix_gratuits.sort(key=lambda x: x[2], reverse=True)
+liste_prix_inconnus.sort(key=lambda x: x[2], reverse=True)
 
 # Affichage
 liste_a_afficher = []
+temps_total = 0
+prix_total = 0
 
 liste_a_afficher.append([])
 for game in liste_playtime0:
     liste_a_afficher[0].append([game[1],"{:.2f}".format(game[3])+ "€"])
+    prix_total += game[3]
 
 liste_a_afficher.append([])
 for game in liste:
     liste_a_afficher[1].append([game[1], "{:.2f}".format(game[2]/60)+"h", "{:.2f}".format(game[3])+"€"])
+    temps_total += game[2]
+    prix_total += game[3]
 
 liste_a_afficher.append([])
 for game in liste_prix_gratuits:
     liste_a_afficher[2].append([game[1], "{:.2f}".format(game[2]/60)+"h"])
+    temps_total += game[2]
 
 liste_a_afficher.append([])
 for game in liste_prix_inconnus:
     liste_a_afficher[3].append([game[1], "{:.2f}".format(game[2]/60)+"h"])
+    temps_total += game[2]
 
 if STEAM_USER == 76561198142605500:
     f = open("monresult.txt", "w")
 else:
     f = open("result.txt", "w")
 
+if len(liste_prix_inconnus) > 0:
+    f.write("Jeux dont le prix est inconnu\n")
+    f.write(str(pd.DataFrame(liste_a_afficher[3], columns=["Nom", "Temps de jeu"])))
+    f.write("\n\n")
+if len(liste_prix_gratuits) > 0:
+    f.write("Jeux gratuits\n")
+    f.write(str(pd.DataFrame(liste_a_afficher[2], columns=["Nom", "Temps de jeu"])))
+    f.write("\n\n")
 if JEUX_NON_JOUES and len(liste_playtime0) > 0:
     f.write("Jeux non joués\n")
     f.write(str(pd.DataFrame(liste_a_afficher[0], columns=["Nom", "Prix"])))
@@ -116,10 +131,6 @@ if len(liste) > 0:
     f.write("Jeux joués\n")
     f.write(str(pd.DataFrame(liste_a_afficher[1], columns=["Nom", "Temps de jeu", "Prix"])))
     f.write("\n\n")
-if len(liste_prix_gratuits) > 0:
-    f.write("Jeux gratuits\n")
-    f.write(str(pd.DataFrame(liste_a_afficher[2], columns=["Nom", "Temps de jeu"])))
-    f.write("\n\n")
-if len(liste_prix_inconnus) > 0:
-    f.write("Jeux dont le prix est inconnu\n")
-    f.write(str(pd.DataFrame(liste_a_afficher[3], columns=["Nom", "Temps de jeu"])))
+
+f.write("Temps total de jeu : " + "{:.2f}".format(temps_total/60) + "h\n")
+f.write("Prix total : " + "{:.2f}".format(prix_total) + "€\n")
