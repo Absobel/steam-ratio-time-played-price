@@ -1,6 +1,8 @@
 result.txt
 monresult.txt
 thisenv
+.env
+games.json
 
 *.json
 

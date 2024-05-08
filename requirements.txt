@@ -1,7 +1,7 @@
-alive_progress==3.0.1
-CurrencyConverter==0.5.5
-pandas==1.5.3
-python-decouple==3.7
-python_steam_api==1.0.8
-bs4==0.0.2
-zope=5.9
+alive_progress
+CurrencyConverter
+pandas
+python-steam-api
+python-decouple
+bs4
+zope
