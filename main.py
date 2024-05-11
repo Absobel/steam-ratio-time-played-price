@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from collections import deque
 import subprocess
 from typing import Any, Dict, List, Literal, NamedTuple, Optional, Tuple, Union
 import curses
@@ -110,7 +111,7 @@ def all_games_info(stdscr, stm: steam.Steam, steam_id: str, c: CurrencyConverter
         
     is_rate_limiting = len(liste_jeux) > 200
     num_games = len(liste_jeux)
-    max_width = curses.COLS // 2
+    max_width = curses.COLS // 4
     curses.curs_set(0)
     
     for i,game in enumerate(liste_jeux):
@@ -119,6 +120,7 @@ def all_games_info(stdscr, stm: steam.Steam, steam_id: str, c: CurrencyConverter
         progress_bar_str = "[" + "#" * progress + " " * (max_width - progress - 1) + "]"
         fraction_str = f'{i+1}/{num_games}'
         percentage_str = f'{int(i / num_games * 100)}%'
+        stdscr.addstr(0, 0, ' ' * curses.COLS)
         stdscr.addstr(0, 0, f'{progress_bar_str} {fraction_str} | {percentage_str} | {game["name"]}')
         stdscr.refresh()
         
@@ -339,7 +341,7 @@ def main(stdscr):
     
     # MODE CHOICE
     
-    mode_options = ['One Game', 'All Games']
+    mode_options = ['One Game', 'All Games', 'Global Stats']
     mode_choice = choice(stdscr, mode_options, 'Select Mode')    
     stdscr.clear()
     match mode_options[mode_choice]:
@@ -359,6 +361,13 @@ def main(stdscr):
             write_formated_stats_cache(cache_folder_name)
             stdscr.clear()
             stdscr.addstr(f"You will find the formated stats in : {CACHE_FOLDER}/{cache_folder_name}/{FORMATED_STATS_FILE}")
+        case 'Global Stats':
+            if does_cache_all_games_stats_exist(cache_folder_name):
+                with open(f"{CACHE_FOLDER}/{cache_folder_name}/{FORMATED_STATS_FILE}", "r") as f:
+                    for line in deque(f, maxlen=5):
+                        stdscr.addstr(line)
+            else:
+                stdscr.addstr('No cached data for this account. Please run "All Games" mode first.')
 
     # To keep the app open until the user presses a key
     stdscr.refresh()
