@@ -341,37 +341,40 @@ def main(stdscr):
     
     # MODE CHOICE
     
-    mode_options = ['One Game', 'All Games', 'Global Stats']
-    mode_choice = choice(stdscr, mode_options, 'Select Mode')    
-    stdscr.clear()
-    match mode_options[mode_choice]:
-        case 'One Game':
-            if does_cache_all_games_stats_exist(cache_folder_name):
-                game_infos = get_cache_all_games_stats(cache_folder_name)
-                all_game_names = [game['name'] for game in game_infos]
-                result = subprocess.run(['fzf'], input='\n'.join(all_game_names), text=True, stdout=subprocess.PIPE)
-                selected = result.stdout.strip()
-                update_info_game(game_infos, selected, cache_folder_name, init_data.stm, init_data.c)
-                display_stats_for_one_game(stdscr, game_infos, selected)
-            else:
-                stdscr.addstr('No cached data for this account. Please run "All Games" mode first.')
-        case 'All Games':
-            game_infos = all_games_info(stdscr, init_data.stm, steam_id, init_data.c)
-            add_cache_all_games_stats(game_infos, cache_folder_name)
-            write_formated_stats_cache(cache_folder_name)
-            stdscr.clear()
-            stdscr.addstr(f"You will find the formated stats in : {CACHE_FOLDER}/{cache_folder_name}/{FORMATED_STATS_FILE}")
-        case 'Global Stats':
-            if does_cache_all_games_stats_exist(cache_folder_name):
-                with open(f"{CACHE_FOLDER}/{cache_folder_name}/{FORMATED_STATS_FILE}", "r") as f:
-                    for line in deque(f, maxlen=5):
-                        stdscr.addstr(line)
-            else:
-                stdscr.addstr('No cached data for this account. Please run "All Games" mode first.')
+    while True:
+        mode_options = ['One Game', 'All Games', 'Global Stats', "Quit"]
+        mode_choice = choice(stdscr, mode_options, 'Select Mode')    
+        stdscr.clear()
+        match mode_options[mode_choice]:
+            case 'One Game':
+                if does_cache_all_games_stats_exist(cache_folder_name):
+                    game_infos = get_cache_all_games_stats(cache_folder_name)
+                    all_game_names = [game['name'] for game in game_infos]
+                    result = subprocess.run(['fzf'], input='\n'.join(all_game_names), text=True, stdout=subprocess.PIPE)
+                    selected = result.stdout.strip()
+                    update_info_game(game_infos, selected, cache_folder_name, init_data.stm, init_data.c)
+                    display_stats_for_one_game(stdscr, game_infos, selected)
+                else:
+                    stdscr.addstr('No cached data for this account. Please run "All Games" mode first.')
+            case 'All Games':
+                game_infos = all_games_info(stdscr, init_data.stm, steam_id, init_data.c)
+                add_cache_all_games_stats(game_infos, cache_folder_name)
+                write_formated_stats_cache(cache_folder_name)
+                stdscr.clear()
+                stdscr.addstr(f"You will find the formated stats in : {CACHE_FOLDER}/{cache_folder_name}/{FORMATED_STATS_FILE}")
+            case 'Global Stats':
+                if does_cache_all_games_stats_exist(cache_folder_name):
+                    with open(f"{CACHE_FOLDER}/{cache_folder_name}/{FORMATED_STATS_FILE}", "r") as f:
+                        for line in deque(f, maxlen=5):
+                            stdscr.addstr(line)
+                else:
+                    stdscr.addstr('No cached data for this account. Please run "All Games" mode first.')
+            case 'Quit':
+                break
 
-    # To keep the app open until the user presses a key
-    stdscr.refresh()
-    stdscr.getkey()
+        # To keep the app open until the user presses a key
+        stdscr.refresh()
+        stdscr.getkey()
 
 if __name__ == '__main__':
     curses.wrapper(main)

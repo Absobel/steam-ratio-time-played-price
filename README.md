@@ -13,5 +13,5 @@ STEAM_API_KEY=[YOUR_API_KEY]
 ```
 
 # TODO
-- [ ] Add DLCs (possibly with https://store.steampowered.com/dynamicstore/userdata but meh)
 - [ ] Complete the TODOs in the code
+- [ ] Add DLCs (possibly with https://store.steampowered.com/dynamicstore/userdata but meh)
