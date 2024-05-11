@@ -1,7 +1,6 @@
-result.txt
-monresult.txt
 thisenv
 .env
+cache
 games.json
 
 *.json

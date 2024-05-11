@@ -1,13 +1,17 @@
-# steam-rapport-heure-de-jeu-prix
-Trie les jeux d'un user steam par rapport heure de jeu prix. Si vous avez plus de 200 entrées dans votre bibliothèque, ça va prendre beaucoup plus de temps parce que l'api de steam limite les appels.
+# steam-game-time-price-ratio
+Sorts Steam games by the ratio of playtime to price for a user. If you have more than 200 entries in your library, it will take much longer due to Steam API's call rate limits.
 
-# Pour que ça marche
-Faut mettre ça dans un terminal.
-``` pip install -r requirements.txt ```
+# To make it work
+You need to run this in a terminal, preferably in a virtual environment : 
+```bash
+pip install -r requirements.txt
+```
+
+You also need to create a `.env` file with [your API key](https://steamcommunity.com/dev/apikey) in the following format:
+```bash
+STEAM_API_KEY=[YOUR_API_KEY]
+```
 
 # TODO
-- [ ] Ajouter meilleur debugging (messages d'erreurs quand jeu prix inconnu)
-- [ ] Faire un truc pour la clef api et remettre le truc public
-- [ ] Ajouter les dlc (maybe avec https://store.steampowered.com/dynamicstore/userdata mais ça devient complexe)
-- [ ] Réduire le nombre d'appels
-- [ ] Mettre les trucs en anglais et réécrire au propre
+- [ ] Add DLCs (possibly with https://store.steampowered.com/dynamicstore/userdata but meh)
+- [ ] Complete the TODOs in the code
