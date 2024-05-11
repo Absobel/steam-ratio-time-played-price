@@ -349,7 +349,8 @@ def main(stdscr):
     # MODE CHOICE
     
     while True:
-        mode_options = ['One Game', 'All Games', 'Global Stats', "Quit"]
+        # TODO : make the option clearer
+        mode_options = ['One Game', 'All Games', 'Cached Games', 'Global Stats', "Quit"]
         mode_choice = choice(stdscr, mode_options, 'Select Mode')    
         stdscr.clear()
         match mode_options[mode_choice]:
@@ -369,6 +370,13 @@ def main(stdscr):
                 write_formated_stats_cache(cache_folder_name)
                 stdscr.clear()
                 stdscr.addstr(f"You will find the formated stats in : {CACHE_FOLDER}/{cache_folder_name}/{FORMATED_STATS_FILE}")
+            case 'Cached Games':
+                if does_cache_all_games_stats_exist(cache_folder_name):
+                    write_formated_stats_cache(cache_folder_name)
+                    stdscr.clear()
+                    stdscr.addstr(f"You will find the formated stats in : {CACHE_FOLDER}/{cache_folder_name}/{FORMATED_STATS_FILE}")
+                else:
+                    stdscr.addstr('No cached data for this account. Please run "All Games" mode first.')
             case 'Global Stats':
                 if does_cache_all_games_stats_exist(cache_folder_name):
                     with open(f"{CACHE_FOLDER}/{cache_folder_name}/{FORMATED_STATS_FILE}", "r") as f:
