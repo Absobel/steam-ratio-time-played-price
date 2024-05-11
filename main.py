@@ -278,7 +278,13 @@ def display_stats_for_one_game(stdscr, game_infos: List[Dict[str, Any]], selecte
     pass
 
 # TODO : factorize the way to update each type of game stats
-def update_info_game(game_infos: List[Dict[str, Any]], selected: str, folder_cache_name: str, stm: steam.Steam, c: CurrencyConverter):
+def update_info_game(game_infos: List[Dict[str, Any]], selected: str, name: str, steam_id: str, stm: steam.Steam, c: CurrencyConverter):
+    folder_cache_name = f'{name}_{steam_id}'
+    games = stm.users.get_owned_games(steam_id)
+    for game in games["games"]:
+        if game["name"] == selected:
+            playtime_selected = game["playtime_forever"]
+    
     for game in game_infos:
         if game['name'] == selected:
             dico = stm.apps.get_app_details(game["appid"], country=COUNTRY, filters="basic,price_overview")
@@ -309,6 +315,7 @@ def update_info_game(game_infos: List[Dict[str, Any]], selected: str, folder_cac
                 price = 0
 
             game["price"] = price
+            game["playtime_forever"] = playtime_selected # type: ignore
     add_cache_all_games_stats(game_infos, folder_cache_name)
 
 # MAIN
@@ -352,7 +359,7 @@ def main(stdscr):
                     all_game_names = [game['name'] for game in game_infos]
                     result = subprocess.run(['fzf'], input='\n'.join(all_game_names), text=True, stdout=subprocess.PIPE)
                     selected = result.stdout.strip()
-                    update_info_game(game_infos, selected, cache_folder_name, init_data.stm, init_data.c)
+                    update_info_game(game_infos, selected, name, steam_id, init_data.stm, init_data.c)
                     display_stats_for_one_game(stdscr, game_infos, selected)
                 else:
                     stdscr.addstr('No cached data for this account. Please run "All Games" mode first.')
