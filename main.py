@@ -274,7 +274,7 @@ def display_stats_for_one_game(stdscr, game_infos: List[Dict[str, Any]], selecte
                 else:
                     temps_vise = "N/A"
                 a_afficher = [[game["name"], "{:.2f}".format(game["playtime_forever"]/60)+"h", "{:.2f}".format(game["price"])+"€", "{:.2f}".format(ratio), temps_vise]]
-                stdscr.addstr(pd.DataFrame(a_afficher, columns=["Name", "Playtime", "Price", "Ratio", "Target remaining time"]).to_string(index=False))
+                stdscr.addstr(pd.DataFrame(a_afficher, columns=["Name", "Playtime", "Price", "Ratio (min/€)", "Target remaining time"]).to_string(index=False))
     pass
 
 # TODO : factorize the way to update each type of game stats
