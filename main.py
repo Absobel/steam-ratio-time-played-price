@@ -237,7 +237,7 @@ def write_formated_stats_cache(cache_folder_name: str):
             f.write("\n\n")
         if len(liste_norm) > 0:
             f.write("Jeux joués\n")
-            f.write(str(pd.DataFrame(liste_a_afficher[1], columns=["Nom", "Temps de jeu", "Prix", "Ratio", "Temps restant visé"])))
+            f.write(str(pd.DataFrame(liste_a_afficher[1], columns=["Nom", "Temps de jeu", "Prix", "Ratio (min/€)", "Temps restant visé"])))
             f.write("\n\n")
 
         f.write("Ratio moyen : " + "{:.2f}".format(stats.mean(liste_ratios)) + "\n")
