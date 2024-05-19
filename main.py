@@ -321,6 +321,10 @@ def update_info_game(game_infos: List[Dict[str, Any]], selected: str, name: str,
 # MAIN
 
 def main(stdscr):
+    script_path = os.path.abspath(__file__)
+    script_dir = os.path.dirname(script_path)
+    os.chdir(script_dir)
+   
     init_data = init()
     
     stdscr.clear()
