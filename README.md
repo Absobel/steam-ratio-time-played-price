@@ -1,6 +1,8 @@
 # steam-game-time-price-ratio
 Sorts Steam games by the ratio of playtime to price for a user. If you have more than 200 entries in your library, it will take much longer due to Steam API's call rate limits.
 
+It works with linux and windows !
+
 # To make it work
 You need to run this in a terminal, preferably in a virtual environment : 
 ```bash

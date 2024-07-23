@@ -5,3 +5,6 @@ python-steam-api
 python-decouple
 bs4
 zope
+iterfzf
+curses; os_name == "posix"
+windows-curses; os_name == "nt"

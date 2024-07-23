@@ -2,9 +2,9 @@
 
 from collections import deque
 import subprocess
-from typing import Any, Dict, List, Literal, NamedTuple, Optional, Tuple, Union
-import curses
+from typing import Any, Dict, List, NamedTuple, Optional, Tuple
 import os
+import curses
 from decouple import config
 import steam_web_api as steam
 import json
@@ -77,11 +77,11 @@ def add_cache_steam_id(data: Tuple[str, str]) -> None:
     os.makedirs(folder_path, exist_ok=True)
     
 def add_cache_all_games_stats(data: List[Dict[str, Any]], folder_cache_name: str) -> None:
-    with open(f"{CACHE_FOLDER}/{folder_cache_name}/{GAME_STATS_FILE}", "w") as file:
+    with open(f"{CACHE_FOLDER}/{folder_cache_name}/{GAME_STATS_FILE}", "w", encoding='utf-8') as file:
         json.dump(data, file, indent=4)
         
 def get_cache_all_games_stats(folder_cache_name: str) -> List[Dict[str, Any]]:
-    with open(f"{CACHE_FOLDER}/{folder_cache_name}/{GAME_STATS_FILE}", "r") as file:
+    with open(f"{CACHE_FOLDER}/{folder_cache_name}/{GAME_STATS_FILE}", "r", encoding='utf-8') as file:
         return json.load(file)
     
 def does_cache_all_games_stats_exist(folder_cache_name: str) -> bool:
@@ -222,7 +222,7 @@ def write_formated_stats_cache(cache_folder_name: str):
         liste_a_afficher[3].append([game["name"], "{:.2f}".format(game["playtime_forever"]/60)+"h", game["error"]])
         temps_total += game["playtime_forever"]
 
-    with open(f"{CACHE_FOLDER}/{cache_folder_name}/{FORMATED_STATS_FILE}", "w") as f:
+    with open(f"{CACHE_FOLDER}/{cache_folder_name}/{FORMATED_STATS_FILE}", "w", encoding='utf-8') as f:
         if len(liste_prix_inconnus) > 0:
             f.write("Jeux dont le prix est inconnu\n")
             f.write(str(pd.DataFrame(liste_a_afficher[3], columns=["Nom", "Temps de jeu", "Raison"])))
@@ -362,8 +362,10 @@ def main(stdscr):
                 if does_cache_all_games_stats_exist(cache_folder_name):
                     game_infos = get_cache_all_games_stats(cache_folder_name)
                     all_game_names = [game['name'] for game in game_infos]
-                    result = subprocess.run(['fzf'], input='\n'.join(all_game_names), text=True, stdout=subprocess.PIPE)
-                    selected = result.stdout.strip()
+                    # result = subprocess.run(['fzf'], input='\n'.join(game_names), text=True, stdout=subprocess.PIPE)
+                    # selected = result.stdout.strip()
+                    import iterfzf as fzf
+                    selected = fzf.iterfzf(all_game_names)
                     update_info_game(game_infos, selected, name, steam_id, init_data.stm, init_data.c)
                     display_stats_for_one_game(stdscr, game_infos, selected)
                 else:
@@ -383,7 +385,7 @@ def main(stdscr):
                     stdscr.addstr('No cached data for this account. Please run "All Games" mode first.')
             case 'Global Stats':
                 if does_cache_all_games_stats_exist(cache_folder_name):
-                    with open(f"{CACHE_FOLDER}/{cache_folder_name}/{FORMATED_STATS_FILE}", "r") as f:
+                    with open(f"{CACHE_FOLDER}/{cache_folder_name}/{FORMATED_STATS_FILE}", "r", encoding='utf-8') as f:
                         for line in deque(f, maxlen=5):
                             stdscr.addstr(line)
                 else:
