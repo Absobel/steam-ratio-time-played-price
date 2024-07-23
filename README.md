@@ -12,6 +12,11 @@ You also need to create a `.env` file with [your API key](https://steamcommunity
 STEAM_API_KEY=[YOUR_API_KEY]
 ```
 
+Then just run :
+```bash
+python main.py
+```
+
 # How to use
 
 After adding the Steam ID of the account you want to analyze, you have four options to choose from:
