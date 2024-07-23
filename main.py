@@ -13,6 +13,7 @@ from alive_progress import alive_bar
 import pandas as pd
 import time
 import statistics as stats
+import iterfzf as fzf
 
 # CONSTANTS
 
@@ -362,9 +363,6 @@ def main(stdscr):
                 if does_cache_all_games_stats_exist(cache_folder_name):
                     game_infos = get_cache_all_games_stats(cache_folder_name)
                     all_game_names = [game['name'] for game in game_infos]
-                    # result = subprocess.run(['fzf'], input='\n'.join(game_names), text=True, stdout=subprocess.PIPE)
-                    # selected = result.stdout.strip()
-                    import iterfzf as fzf
                     selected = fzf.iterfzf(all_game_names)
                     update_info_game(game_infos, selected, name, steam_id, init_data.stm, init_data.c)
                     display_stats_for_one_game(stdscr, game_infos, selected)
