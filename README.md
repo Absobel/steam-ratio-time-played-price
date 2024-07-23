@@ -22,7 +22,6 @@ After adding the Steam ID of the account you want to analyze, you have four opti
 3. **Cached Games**: Update the file with statistics from your entire library based on a cached analysis.
 4. **Global Stats**: Provide miscellaneous statistics about your library.
 
+# Known issues
 
-# TODO
-- [ ] Complete the TODOs in the code
-- [ ] Add DLCs (possibly with https://store.steampowered.com/dynamicstore/userdata but meh)
+It takes neither DLCs nor family shared games into account (feel free to make a PR if you have a solution).
