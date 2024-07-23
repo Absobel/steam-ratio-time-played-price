@@ -1,5 +1,4 @@
-Sorts Steam games by the ratio of playtime to price for a user. If you have more than 200 entries in your library, it will take much longer due to Steam API's call rate limits.
-
+Sorts Steam games by the ratio of playtime to price for a user. 
 It works with linux and windows !
 
 # To make it work
@@ -24,4 +23,5 @@ After adding the Steam ID of the account you want to analyze, you have four opti
 
 # Known issues
 
-It takes neither DLCs nor family shared games into account (feel free to make a PR if you have a solution).
+- If you have more than 200 entries in your library, it will take much longer due to Steam API's call rate limits.
+- It takes neither DLCs nor family shared games into account (feel free to make a PR if you have a solution).
