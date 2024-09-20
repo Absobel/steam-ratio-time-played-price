@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from collections import deque
-import subprocess
 from typing import Any, Dict, List, NamedTuple, Optional, Tuple
 import os
 import curses
@@ -9,7 +8,6 @@ from decouple import config
 import steam_web_api as steam
 import json
 from currency_converter import CurrencyConverter
-from alive_progress import alive_bar
 import pandas as pd
 import time
 import statistics as stats
@@ -23,6 +21,8 @@ FORMATED_STATS_FILE = 'formated_stats.txt'
 # TODO make these configurable
 COUNTRY = "FR"
 RATIO_CIBLE = 25
+
+# TODO : Translate all of this in english
 
 # CURSES UTILS
 
@@ -95,6 +95,7 @@ class InitData(NamedTuple):
     c: CurrencyConverter
 
 def init() -> InitData:
+    # TODO : make the user enter the key if it's not in the .env file
     KEY = config("STEAM_API_KEY")
     pd.set_option('display.max_rows', None)
     
@@ -172,7 +173,7 @@ def write_formated_stats_cache(cache_folder_name: str):
     liste_playtime0 = []
     liste_prix_inconnus = []
     liste_prix_gratuits = []
-    for i, game in enumerate(json_stats):
+    for game in json_stats:
         if "price" not in game:
             liste_prix_inconnus.append(game)
         elif game["price"] == 0:
@@ -193,8 +194,13 @@ def write_formated_stats_cache(cache_folder_name: str):
     liste_ratios = []
 
     liste_a_afficher.append([])
-    for game in liste_playtime0:
-        liste_a_afficher[0].append([game["name"],"{:.2f}".format(game["price"])+ "€"])
+    for game in liste_playtime0:        
+        temps_vise_float = game["price"] * RATIO_CIBLE
+        if temps_vise_float > 60:
+            temps_vise = "{:.2f}".format(temps_vise_float/60) + "h"
+        else:
+            temps_vise = "{:.2f}".format(temps_vise_float) + "min"
+        liste_a_afficher[0].append([game["name"],"{:.2f}".format(game["price"])+ "€", temps_vise])
         prix_total += game["price"]
 
     liste_a_afficher.append([])
@@ -234,7 +240,7 @@ def write_formated_stats_cache(cache_folder_name: str):
             f.write("\n\n")
         if len(liste_playtime0) > 0:
             f.write("Jeux non joués\n")
-            f.write(str(pd.DataFrame(liste_a_afficher[0], columns=["Nom", "Prix"])))
+            f.write(str(pd.DataFrame(liste_a_afficher[0], columns=["Nom", "Prix", "Temps de jeu visé"])))
             f.write("\n\n")
         if len(liste_norm) > 0:
             f.write("Jeux joués\n")
@@ -247,7 +253,7 @@ def write_formated_stats_cache(cache_folder_name: str):
         f.write("Temps total de jeu : " + "{:.2f}".format(temps_total/60) + "h\n")
         f.write("Prix total : " + "{:.2f}".format(prix_total) + "€\n")
 
-# TODO : better display, feels to cramped
+# TODO : better display, feels to cramped + factorize with previous function
 def display_stats_for_one_game(stdscr, game_infos: List[Dict[str, Any]], selected: str):
     stdscr.clear()
     for game in game_infos:
@@ -261,9 +267,14 @@ def display_stats_for_one_game(stdscr, game_infos: List[Dict[str, Any]], selecte
                 stdscr.addstr(f"{selected} is free\n\n")
                 stdscr.addstr(pd.DataFrame(a_afficher, columns=["Name", "Playtime"]).to_string(index=False))
             elif game["playtime_forever"] == 0:
-                a_afficher = [[game["name"], "{:.2f}".format(game["price"])+"€"]]
+                temps_vise_float = game["price"] * RATIO_CIBLE
+                if temps_vise_float > 60:
+                    temps_vise = "{:.2f}".format(temps_vise_float/60) + "h"
+                else:
+                    temps_vise = "{:.2f}".format(temps_vise_float) + "min"
+                a_afficher = [[game["name"], "{:.2f}".format(game["price"])+"€", temps_vise]]
                 stdscr.addstr(f"{selected} has not been played\n\n")
-                stdscr.addstr(pd.DataFrame(a_afficher, columns=["Name", "Price"]).to_string(index=False))
+                stdscr.addstr(pd.DataFrame(a_afficher, columns=["Name", "Price", "Targeted Playtime"]).to_string(index=False))
             else:
                 ratio = game["playtime_forever"]/game["price"]
                 if ratio < RATIO_CIBLE:
