@@ -1,16 +1,14 @@
 Sorts Steam games by the ratio of playtime to price for a user. 
 It works with linux and windows !
+Programmed in 3.11.2, idk if it works with other versions.
 
 # To make it work
-You need to run this in a terminal, preferably in a virtual environment : 
+You need to run this in a terminal, preferably in a [virtual environment](https://docs.python.org/fr/3/library/venv.html) : 
 ```bash
 pip install -r requirements.txt
 ```
 
-You also need to create a `.env` file with [your API key](https://steamcommunity.com/dev/apikey) in the following format:
-```bash
-STEAM_API_KEY=[YOUR_API_KEY]
-```
+You will also need to enter [your API key](https://steamcommunity.com/dev/apikey) at the first launch.
 
 Then just run :
 ```bash
