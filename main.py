@@ -13,6 +13,8 @@ import time
 import statistics as stats
 import iterfzf as fzf
 
+# TODO : Verify docstrings
+
 # CONSTANTS
 
 CACHE_FOLDER = 'cache'
@@ -21,6 +23,11 @@ FORMATED_STATS_FILE = 'formated_stats.txt'
 # TODO make these configurable
 COUNTRY = "FR"
 RATIO_CIBLE = 25
+
+stm: steam.Steam = None # type: ignore
+c: CurrencyConverter = None # type: ignore
+user_name: str = None # type: ignore
+steam_id: str = None # type: ignore
 
 # CURSES UTILS
 
@@ -89,10 +96,6 @@ def input_str(stdscr, prompt: str) -> str:
     
 # OTHER UTILS
 
-class ApiAccess(NamedTuple):
-    stm: steam.Steam
-    c: CurrencyConverter
-
 def get_key(stdscr) -> str:
     """
     Retrieves the Steam API key from the environment if it exists. \\
@@ -152,18 +155,26 @@ def add_cache_steam_id(data: Tuple[str, str]) -> None:
     folder_path = f'{CACHE_FOLDER}/{name}_{steam_id}'
     os.makedirs(folder_path, exist_ok=True)
     
-def add_cache_all_games_stats(data: List[Dict[str, Any]], user_cache_folder: str) -> None:
+def add_cache_all_games_stats(data: List[Dict[str, Any]]) -> None:
     """
     Writes a list of game stats to a cache file.
     
     args:
         data: A json object containing the game stats.
-        user_cache_folder: The name of the cache folder for the user.
     """
+    user_cache_folder = f'{user_name}_{steam_id}'
     with open(f"{CACHE_FOLDER}/{user_cache_folder}/{GAME_STATS_FILE}", "w", encoding='utf-8') as file:
         json.dump(data, file, indent=4)
+    
+def update_cache_one_game_stats(selected: str, data: Dict[str, Any]) -> None:
+    all_game_stats = get_cache_all_games_stats()
+    for i,game in enumerate(all_game_stats):
+        if game['name'] == selected:
+            all_game_stats[i] = data
+            break
+    add_cache_all_games_stats(all_game_stats)
         
-def get_cache_all_games_stats(user_cache_folder: str) -> List[Dict[str, Any]]:
+def get_cache_all_games_stats() -> List[Dict[str, Any]]:
     """
     Retrieves game stats from a specific user's cache folder.
     
@@ -173,10 +184,11 @@ def get_cache_all_games_stats(user_cache_folder: str) -> List[Dict[str, Any]]:
     returns:
         The converted json object containing the game stats.
     """
+    user_cache_folder = f'{user_name}_{steam_id}'
     with open(f"{CACHE_FOLDER}/{user_cache_folder}/{GAME_STATS_FILE}", "r", encoding='utf-8') as file:
         return json.load(file)
     
-def does_cache_all_games_stats_exist(user_cache_folder: str) -> bool:
+def does_cache_all_games_stats_exist() -> bool:
     """
     Checks if the cache file for a specific user exists.
     
@@ -186,38 +198,80 @@ def does_cache_all_games_stats_exist(user_cache_folder: str) -> bool:
     returns:
         True if the cache file exists, otherwise False.
     """
+    user_cache_folder = f'{user_name}_{steam_id}'
     return os.path.isfile(f'{CACHE_FOLDER}/{user_cache_folder}/{GAME_STATS_FILE}')
 
 
 # FETCH/COMPUTE STATS
 
-def all_games_info(stdscr, steam_id: str, api_access: ApiAccess) -> List[Dict[str, Any]]:
+def process_stats_game(game: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Processes the stats for a single game from the Steam API.
+    
+    args:
+        game: A json object containing the game stats as given by the Steam API.
+    
+    returns:
+        A json object containing the processed game stats.
+    """
+  
+    # dico : stats for one game
+    dico = stm.apps.get_app_details(game["appid"], country=COUNTRY, filters="basic,price_overview")
+    if dico is None:
+        time.sleep(1)
+        dico = stm.apps.get_app_details(game["appid"], country=COUNTRY, filters="basic,price_overview")
+        if dico is None:
+            raise Exception("Probably rate limiting idk")
+    dico = dico[str(game["appid"])]
+    
+    processed_game = {"appid": game["appid"], "name": game["name"], "playtime_forever": game["playtime_forever"]}
+
+    if "data" not in dico:
+        processed_game["error"] = "No store page"
+        return processed_game
+    
+    is_payant = not dico["data"]["is_free"]
+    
+    if is_payant and "price_overview" not in dico["data"]:
+        processed_game["error"] = "Not standalone"
+        return processed_game
+    
+    if is_payant:
+        price = c.convert(
+            dico["data"]["price_overview"]["initial"] / 100, 
+            dico["data"]["price_overview"]["currency"], 
+            "EUR"
+        )
+    else:
+        price = 0
+        
+    processed_game["price"] = price
+    return processed_game
+    
+def all_games_info(stdscr) -> List[Dict[str, Any]]:
     """
     Fetches information about all games owned by a user from the Steam API.
     
     args:
         stdscr: The curses window object.
         steam_id: The Steam ID of the user.
-        init_data: A named tuple containing the Steam API object and the currency converter object.
     
     returns:
         A json object containing game information.
     """
-    stm = api_access.stm
-    c = api_access.c
     games = stm.users.get_owned_games(steam_id)
     
     liste_jeux: list[dict[str, Any]] = []
-    for game in games["games"]:
-        liste_jeux.append({"appid": game["appid"], "name": game["name"], "playtime_forever": game["playtime_forever"]})
-        
+
+    # Setup progress bar
     is_rate_limiting = len(liste_jeux) > 200
-    num_games = len(liste_jeux)
+    num_games = len(games["games"])
     max_width = curses.COLS // 4
     curses.curs_set(0)
     
-    for i,game in enumerate(liste_jeux):
+    for i,game in enumerate(games["games"]):
         # TODO : make it better and more informative (estimated time left, etc.)
+        # Update progress bar
         progress = int(i / num_games * max_width)
         progress_bar_str = "[" + "#" * progress + " " * (max_width - progress - 1) + "]"
         fraction_str = f'{i+1}/{num_games}'
@@ -228,34 +282,7 @@ def all_games_info(stdscr, steam_id: str, api_access: ApiAccess) -> List[Dict[st
         
         start = time.time()
         
-        dico = stm.apps.get_app_details(game["appid"], country=COUNTRY, filters="basic,price_overview")
-        if dico is None:
-            time.sleep(1)
-            dico = stm.apps.get_app_details(game["appid"], country=COUNTRY, filters="basic,price_overview")
-            if dico is None:
-                raise Exception("Probably rate limiting idk")
-        dico = dico[str(game["appid"])]
-        
-        if "data" not in dico:
-            liste_jeux[i]["error"] = "No store page"
-            continue
-        
-        is_payant = not dico["data"]["is_free"]
-        
-        if is_payant and "price_overview" not in dico["data"]:
-            liste_jeux[i]["error"] = "Not standalone"
-            continue
-        
-        if is_payant:
-            price = c.convert(
-                dico["data"]["price_overview"]["initial"] / 100, 
-                dico["data"]["price_overview"]["currency"], 
-                "EUR"
-            )
-        else:
-            price = 0
-            
-        liste_jeux[i]["price"] = price
+        liste_jeux.append(process_stats_game(game))
         
         end = time.time()
         if is_rate_limiting:
@@ -266,15 +293,34 @@ def all_games_info(stdscr, steam_id: str, api_access: ApiAccess) -> List[Dict[st
     curses.curs_set(1)
     return liste_jeux    
 
+def update_info_game(selected: str):
+    """
+    Fetches and updates the stats for a single game in cache from the Steam API.
+    
+    args:
+        selected: The name of the game.
+    """
+    games = stm.users.get_owned_games(steam_id)
+    
+    game_info = None
+    for game in games["games"]:
+        if game['name'] == selected:
+            game_info = process_stats_game(game)
+            break
+    if game_info is None:
+        raise Exception(f"The cache somehow got modified while the program was running")
+    
+    update_cache_one_game_stats(selected, game_info)
+
 # TODO : factorize the way to display each type of game stats
-def write_formated_stats_cache(user_cache_folder: str):
+def write_formated_stats_cache():
     """
     Computes and writes the full stats to a cache file.
     
     args:
         user_cache_folder: The name of the cache folder for the user.
     """
-    json_stats = get_cache_all_games_stats(user_cache_folder)
+    json_stats = get_cache_all_games_stats()
     liste_norm = []
     liste_playtime0 = []
     liste_prix_inconnus = []
@@ -335,21 +381,21 @@ def write_formated_stats_cache(user_cache_folder: str):
         liste_a_afficher[3].append([game["name"], "{:.2f}".format(game["playtime_forever"]/60)+"h", game["error"]])
         temps_total += game["playtime_forever"]
 
-    with open(f"{CACHE_FOLDER}/{user_cache_folder}/{FORMATED_STATS_FILE}", "w", encoding='utf-8') as f:
+    with open(f"{CACHE_FOLDER}/{user_name}_{steam_id}/{FORMATED_STATS_FILE}", "w", encoding='utf-8') as f:
         if len(liste_prix_inconnus) > 0:
             f.write("Games which price is unknown\n")
             f.write(str(pd.DataFrame(liste_a_afficher[3], columns=["Name", "Playtime", "Reason"])))
             f.write("\n\n")
         if len(liste_prix_gratuits) > 0:
-            f.write("Jeux gratuits\n")
+            f.write("Free games\n")
             f.write(str(pd.DataFrame(liste_a_afficher[2], columns=["Name", "Playtime"])))
             f.write("\n\n")
         if len(liste_playtime0) > 0:
-            f.write("Jeux non joués\n")
+            f.write("Unplayed games\n")
             f.write(str(pd.DataFrame(liste_a_afficher[0], columns=["Name", "Price", "Target playtime"])))
             f.write("\n\n")
         if len(liste_norm) > 0:
-            f.write("Jeux joués\n")
+            f.write("Played payed games\n")
             f.write(str(pd.DataFrame(liste_a_afficher[1], columns=["Name", "Playtime", "Price", "Ratio (min/€)", "Remaining playtime"])))
             f.write("\n\n")
 
@@ -403,112 +449,61 @@ def display_stats_for_one_game(stdscr, game_infos: List[Dict[str, Any]], selecte
                 stdscr.addstr(pd.DataFrame(a_afficher, columns=["Name", "Playtime", "Price", "Ratio (min/€)", "Target remaining time"]).to_string(index=False))
     pass
 
-# TODO : factorize the way to update each type of game stats
-def update_info_game(game_infos: List[Dict[str, Any]], selected: str, name: str, steam_id: str, api_access: ApiAccess):
-    """
-    Fetches and updates the stats for a single game in cache from the Steam API.
-    
-    args:
-        game_infos: A json object containing the game stats.
-        selected: The name of the game.
-        name: The name of the user.
-        steam_id: The Steam ID of the user.
-        init_data: A named tuple containing the Steam API object and the currency converter object.
-    """
-    stm = api_access.stm
-    c = api_access.c
-    folder_cache_name = f'{name}_{steam_id}'
-    games = stm.users.get_owned_games(steam_id)
-    for game in games["games"]:
-        if game["name"] == selected:
-            playtime_selected = game["playtime_forever"]
-    
-    for game in game_infos:
-        if game['name'] == selected:
-            dico = stm.apps.get_app_details(game["appid"], country=COUNTRY, filters="basic,price_overview")
-            if dico is None:
-                time.sleep(1)
-                dico = stm.apps.get_app_details(game["appid"], country=COUNTRY, filters="basic,price_overview")
-                if dico is None:
-                    raise Exception("Probably rate limiting idk")
-            dico = dico[str(game["appid"])]
-
-            if "data" not in dico:
-                game["error"] = "No store page"
-                break
-
-            is_payant = not dico["data"]["is_free"]
-
-            if is_payant and "price_overview" not in dico["data"]:
-                game["error"] = "Not standalone"
-                break
-
-            if is_payant:
-                price = c.convert(
-                    dico["data"]["price_overview"]["initial"] / 100, 
-                    dico["data"]["price_overview"]["currency"], 
-                    "EUR"
-                )
-            else:
-                price = 0
-
-            game["price"] = price
-            game["playtime_forever"] = playtime_selected # type: ignore
-    add_cache_all_games_stats(game_infos, folder_cache_name)
-
 
 # MAIN
 
-def init(stdscr) -> ApiAccess:
+def init_first():
     """
-    Initializes needed data for the application.
-    
-    args:
-        stdscr: The curses window object.
-        
-    returns:
-        A named tuple containing the Steam API object and the currency converter object.
+    Initializes other stuff
     """
-    KEY = get_key(stdscr)
-    pd.set_option('display.max_rows', None)
-    
-    stm = steam.Steam(KEY)
-    c = CurrencyConverter()
-        
-    return ApiAccess(stm, c)
-
-def main(stdscr):
+    # Change the working directory to the script's directory
     script_path = os.path.abspath(__file__)
     script_dir = os.path.dirname(script_path)
     os.chdir(script_dir)
-   
-    init_data = init(stdscr)
     
-    stdscr.clear()
+    pd.set_option('display.max_rows', None)
 
-    # STEAM ID CHOICE
+def init_api(stdscr):
+    """
+    Initializes api access
+    
+    args:
+        stdscr: The curses window object.
+    """
+    KEY = get_key(stdscr)
+    
+    global stm, c 
+    stm = steam.Steam(KEY)
+    c = CurrencyConverter()
+
+def init_user_info(stdscr):
+    global user_name, steam_id
+    
     maybe_steam_ids: Optional[Dict[str, str]] = get_cache_steam_ids()
     if maybe_steam_ids:
         steam_id_options = []
-        for name, steam_id in maybe_steam_ids.items():
-            steam_id_options.append(f'{name} : {steam_id}')
+        for user_name, steam_id in maybe_steam_ids.items():
+            steam_id_options.append(f'{user_name} : {steam_id}')
         steam_id_options.append('Add SteamID')
     else:
         steam_id_options = ['Add SteamID']
     steam_id_choice = choice(stdscr, steam_id_options, 'Select SteamID')
     
     if steam_id_options[steam_id_choice] == 'Add SteamID':
-        [name, steam_id] = input_strs(stdscr, ['Enter name of the account (just for clarity, you can put whatever)', 'Enter SteamID'])
+        [user_name, steam_id] = input_strs(stdscr, ['Enter name of the account (just for clarity, you can put whatever)', 'Enter SteamID'])
         while len(steam_id) != 17 or not steam_id.isdigit():
             steam_id = input_str(stdscr, 'Invalid SteamID. Please enter a valid SteamID')
-        add_cache_steam_id((name, steam_id))
+        add_cache_steam_id((user_name, steam_id))
     else:
-        name, steam_id = steam_id_options[steam_id_choice].split(' : ')
+        user_name, steam_id = steam_id_options[steam_id_choice].split(' : ')
 
-    cache_folder_name = f'{name}_{steam_id}'
+def main(stdscr):
+    init_first()
+    init_api(stdscr)
+    init_user_info(stdscr)
     
-    # MODE CHOICE
-    
+    stdscr.clear()
+        
     while True:
         # TODO : make the option clearer
         mode_options = ['One Game', 'All Games', 'Cached Games', 'Global Stats', "Quit"]
@@ -516,33 +511,33 @@ def main(stdscr):
         stdscr.clear()
         match mode_options[mode_choice]:
             case 'One Game':
-                if does_cache_all_games_stats_exist(cache_folder_name):
-                    game_infos = get_cache_all_games_stats(cache_folder_name)
-                    all_game_names = [game['name'] for game in game_infos]
+                if does_cache_all_games_stats_exist():
+                    cached_game_infos = get_cache_all_games_stats()
+                    all_game_names = [game['name'] for game in cached_game_infos]
                     selected = fzf.iterfzf(all_game_names)
                     if isinstance(selected, str):
-                        update_info_game(game_infos, selected, name, steam_id, init_data)
-                        display_stats_for_one_game(stdscr, game_infos, selected)
+                        update_info_game(selected)
+                        display_stats_for_one_game(stdscr, cached_game_infos, selected)
                     else:
                         stdscr.addstr('Problem with the game selection')
                 else:
                     stdscr.addstr('No cached data for this account. Please run "All Games" mode first.')
             case 'All Games':
-                game_infos = all_games_info(stdscr, steam_id, init_data)
-                add_cache_all_games_stats(game_infos, cache_folder_name)
-                write_formated_stats_cache(cache_folder_name)
+                game_infos = all_games_info(stdscr)
+                add_cache_all_games_stats(game_infos)
+                write_formated_stats_cache()
                 stdscr.clear()
-                stdscr.addstr(f"You will find the formated stats in : {CACHE_FOLDER}/{cache_folder_name}/{FORMATED_STATS_FILE}")
+                stdscr.addstr(f"You will find the formated stats in : {CACHE_FOLDER}/{user_name}_{steam_id}/{FORMATED_STATS_FILE}")
             case 'Cached Games':
-                if does_cache_all_games_stats_exist(cache_folder_name):
-                    write_formated_stats_cache(cache_folder_name)
+                if does_cache_all_games_stats_exist():
+                    write_formated_stats_cache()
                     stdscr.clear()
-                    stdscr.addstr(f"You will find the formated stats in : {CACHE_FOLDER}/{cache_folder_name}/{FORMATED_STATS_FILE}")
+                    stdscr.addstr(f"You will find the formated stats in : {CACHE_FOLDER}/{user_name}_{steam_id}/{FORMATED_STATS_FILE}")
                 else:
                     stdscr.addstr('No cached data for this account. Please run "All Games" mode first.')
             case 'Global Stats':
-                if does_cache_all_games_stats_exist(cache_folder_name):
-                    with open(f"{CACHE_FOLDER}/{cache_folder_name}/{FORMATED_STATS_FILE}", "r", encoding='utf-8') as f:
+                if does_cache_all_games_stats_exist():
+                    with open(f"{CACHE_FOLDER}/{user_name}_{steam_id}/{FORMATED_STATS_FILE}", "r", encoding='utf-8') as f:
                         for line in deque(f, maxlen=5):
                             stdscr.addstr(line)
                 else:
