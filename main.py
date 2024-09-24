@@ -86,7 +86,41 @@ def input_str(stdscr, prompt: str) -> str:
     """
     return input_strs(stdscr, [prompt])[0]
 
-# CACHE UTILS
+    
+# OTHER UTILS
+
+class ApiAccess(NamedTuple):
+    stm: steam.Steam
+    c: CurrencyConverter
+
+def get_key(stdscr) -> str:
+    """
+    Retrieves the Steam API key from the environment if it exists. \\
+    Otherwise, prompts the user to enter it and saves it to a .env file.
+    
+    args:
+        stdscr: The curses window object.
+        
+    returns:
+        The Steam API key as a string
+    """
+    KEY = config("STEAM_API_KEY", default=None)
+    
+    if KEY is None:
+        stdscr.clear()
+        KEY = input_str(stdscr, 'Enter your Steam API key (https://steamcommunity.com/dev/apikey): ')
+        while len(KEY) != 32:
+            KEY = input_str(stdscr, 'Enter a valid key (https://steamcommunity.com/dev/apikey): ')
+    if not isinstance(KEY, str):
+        raise Exception(f"Invalid key: {KEY}")
+    
+    with open('.env', 'w') as f:
+        f.write(f'STEAM_API_KEY={KEY}\n')
+    
+    return KEY 
+
+
+# CACHE
 
 def get_cache_steam_ids() -> Optional[Dict[str, str]]:
     """
@@ -153,56 +187,9 @@ def does_cache_all_games_stats_exist(user_cache_folder: str) -> bool:
         True if the cache file exists, otherwise False.
     """
     return os.path.isfile(f'{CACHE_FOLDER}/{user_cache_folder}/{GAME_STATS_FILE}')
-    
-# OTHER UTILS
 
-class ApiAccess(NamedTuple):
-    stm: steam.Steam
-    c: CurrencyConverter
 
-def init(stdscr) -> ApiAccess:
-    """
-    Initializes needed data for the application.
-    
-    args:
-        stdscr: The curses window object.
-        
-    returns:
-        A named tuple containing the Steam API object and the currency converter object.
-    """
-    KEY = get_key(stdscr)
-    pd.set_option('display.max_rows', None)
-    
-    stm = steam.Steam(KEY)
-    c = CurrencyConverter()
-        
-    return ApiAccess(stm, c)
-
-def get_key(stdscr) -> str:
-    """
-    Retrieves the Steam API key from the environment if it exists. \\
-    Otherwise, prompts the user to enter it and saves it to a .env file.
-    
-    args:
-        stdscr: The curses window object.
-        
-    returns:
-        The Steam API key as a string
-    """
-    KEY = config("STEAM_API_KEY", default=None)
-    
-    if KEY is None:
-        stdscr.clear()
-        KEY = input_str(stdscr, 'Enter your Steam API key (https://steamcommunity.com/dev/apikey): ')
-        while len(KEY) != 32:
-            KEY = input_str(stdscr, 'Enter a valid key (https://steamcommunity.com/dev/apikey): ')
-    if not isinstance(KEY, str):
-        raise Exception(f"Invalid key: {KEY}")
-    
-    with open('.env', 'w') as f:
-        f.write(f'STEAM_API_KEY={KEY}\n')
-    
-    return KEY 
+# FETCH/COMPUTE STATS
 
 def all_games_info(stdscr, steam_id: str, api_access: ApiAccess) -> List[Dict[str, Any]]:
     """
@@ -469,7 +456,26 @@ def update_info_game(game_infos: List[Dict[str, Any]], selected: str, name: str,
             game["playtime_forever"] = playtime_selected # type: ignore
     add_cache_all_games_stats(game_infos, folder_cache_name)
 
+
 # MAIN
+
+def init(stdscr) -> ApiAccess:
+    """
+    Initializes needed data for the application.
+    
+    args:
+        stdscr: The curses window object.
+        
+    returns:
+        A named tuple containing the Steam API object and the currency converter object.
+    """
+    KEY = get_key(stdscr)
+    pd.set_option('display.max_rows', None)
+    
+    stm = steam.Steam(KEY)
+    c = CurrencyConverter()
+        
+    return ApiAccess(stm, c)
 
 def main(stdscr):
     script_path = os.path.abspath(__file__)
@@ -515,14 +521,14 @@ def main(stdscr):
                     all_game_names = [game['name'] for game in game_infos]
                     selected = fzf.iterfzf(all_game_names)
                     if isinstance(selected, str):
-                        update_info_game(game_infos, selected, name, steam_id, init_data.stm, init_data.c)
+                        update_info_game(game_infos, selected, name, steam_id, init_data)
                         display_stats_for_one_game(stdscr, game_infos, selected)
                     else:
                         stdscr.addstr('Problem with the game selection')
                 else:
                     stdscr.addstr('No cached data for this account. Please run "All Games" mode first.')
             case 'All Games':
-                game_infos = all_games_info(stdscr, init_data.stm, steam_id, init_data.c)
+                game_infos = all_games_info(stdscr, steam_id, init_data)
                 add_cache_all_games_stats(game_infos, cache_folder_name)
                 write_formated_stats_cache(cache_folder_name)
                 stdscr.clear()
