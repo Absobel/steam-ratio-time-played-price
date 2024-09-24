@@ -25,6 +25,18 @@ RATIO_CIBLE = 25
 # CURSES UTILS
 
 def choice(stdscr, options: List[str], title: str) -> int:
+    """
+    Displays a list of options to the user and prompts them to choose one.
+
+    args:
+        stdscr: The curses window object used for displaying text.
+        options: A list of strings representing the options to choose from.
+        title: The title to display above the options.
+
+    returns:
+        The index of the chosen option (0-based).
+
+    """
     stdscr.clear()
     stdscr.addstr(title + '\n')
     for i, option in enumerate(options):
@@ -39,6 +51,15 @@ def choice(stdscr, options: List[str], title: str) -> int:
             return int(key) - 1
 
 def input_strs(stdscr, prompts: List[str]) -> List[str]:
+    """
+    Prompts the user for multiple input strings using a curses window.
+    
+    args:
+        stdscr: The curses window object.
+        prompts: A list of prompt strings to display to the user.
+    returns:
+        A list of responses entered by the user corresponding to each prompt.
+    """
     stdscr.clear()
     
     responses = []
@@ -53,11 +74,27 @@ def input_strs(stdscr, prompts: List[str]) -> List[str]:
     return responses
 
 def input_str(stdscr, prompt: str) -> str:
+    """
+    Prompts the user for a single string input using the provided prompt.
+
+    args:
+        stdscr: The curses window object.
+        prompt: The prompt message to display to the user.
+
+    returns:
+        The user's input as a string.
+    """
     return input_strs(stdscr, [prompt])[0]
 
 # CACHE UTILS
 
 def get_cache_steam_ids() -> Optional[Dict[str, str]]:
+    """
+    Retrieves cached Steam IDs from the specified cache folder.
+
+    returns:
+        A dictionary mapping account names to Steam IDs if the cache folder exists, otherwise None.
+    """
     if os.path.isdir(CACHE_FOLDER):
         data = {}
         for folder in os.listdir(CACHE_FOLDER):
@@ -68,6 +105,12 @@ def get_cache_steam_ids() -> Optional[Dict[str, str]]:
         return None
 
 def add_cache_steam_id(data: Tuple[str, str]) -> None:
+    """
+    Creates or updates a cache directory for a given Steam user.
+
+    args:
+        data: A tuple containing the Steam user's name and ID.
+    """
     if not os.path.isdir(CACHE_FOLDER):
         os.mkdir(CACHE_FOLDER)
     name = data[0]
@@ -75,33 +118,77 @@ def add_cache_steam_id(data: Tuple[str, str]) -> None:
     folder_path = f'{CACHE_FOLDER}/{name}_{steam_id}'
     os.makedirs(folder_path, exist_ok=True)
     
-def add_cache_all_games_stats(data: List[Dict[str, Any]], folder_cache_name: str) -> None:
-    with open(f"{CACHE_FOLDER}/{folder_cache_name}/{GAME_STATS_FILE}", "w", encoding='utf-8') as file:
+def add_cache_all_games_stats(data: List[Dict[str, Any]], user_cache_folder: str) -> None:
+    """
+    Writes a list of game stats to a cache file.
+    
+    args:
+        data: A json object containing the game stats.
+        user_cache_folder: The name of the cache folder for the user.
+    """
+    with open(f"{CACHE_FOLDER}/{user_cache_folder}/{GAME_STATS_FILE}", "w", encoding='utf-8') as file:
         json.dump(data, file, indent=4)
         
-def get_cache_all_games_stats(folder_cache_name: str) -> List[Dict[str, Any]]:
-    with open(f"{CACHE_FOLDER}/{folder_cache_name}/{GAME_STATS_FILE}", "r", encoding='utf-8') as file:
+def get_cache_all_games_stats(user_cache_folder: str) -> List[Dict[str, Any]]:
+    """
+    Retrieves game stats from a specific user's cache folder.
+    
+    args:
+        folder_cache_name: The name of the cache folder for the user.
+        
+    returns:
+        The converted json object containing the game stats.
+    """
+    with open(f"{CACHE_FOLDER}/{user_cache_folder}/{GAME_STATS_FILE}", "r", encoding='utf-8') as file:
         return json.load(file)
     
-def does_cache_all_games_stats_exist(folder_cache_name: str) -> bool:
-    return os.path.isfile(f'{CACHE_FOLDER}/{folder_cache_name}/{GAME_STATS_FILE}')
+def does_cache_all_games_stats_exist(user_cache_folder: str) -> bool:
+    """
+    Checks if the cache file for a specific user exists.
+    
+    args:
+        folder_cache_name: The name of the cache folder for the user.
+        
+    returns:
+        True if the cache file exists, otherwise False.
+    """
+    return os.path.isfile(f'{CACHE_FOLDER}/{user_cache_folder}/{GAME_STATS_FILE}')
     
 # OTHER UTILS
 
-class InitData(NamedTuple):
+class ApiAccess(NamedTuple):
     stm: steam.Steam
     c: CurrencyConverter
 
-def init(stdscr) -> InitData:
+def init(stdscr) -> ApiAccess:
+    """
+    Initializes needed data for the application.
+    
+    args:
+        stdscr: The curses window object.
+        
+    returns:
+        A named tuple containing the Steam API object and the currency converter object.
+    """
     KEY = get_key(stdscr)
     pd.set_option('display.max_rows', None)
     
     stm = steam.Steam(KEY)
     c = CurrencyConverter()
         
-    return InitData(stm, c)
+    return ApiAccess(stm, c)
 
 def get_key(stdscr) -> str:
+    """
+    Retrieves the Steam API key from the environment if it exists. \\
+    Otherwise, prompts the user to enter it and saves it to a .env file.
+    
+    args:
+        stdscr: The curses window object.
+        
+    returns:
+        The Steam API key as a string
+    """
     KEY = config("STEAM_API_KEY", default=None)
     
     if KEY is None:
@@ -117,7 +204,20 @@ def get_key(stdscr) -> str:
     
     return KEY 
 
-def all_games_info(stdscr, stm: steam.Steam, steam_id: str, c: CurrencyConverter) -> List[Dict[str, Any]]:
+def all_games_info(stdscr, steam_id: str, api_access: ApiAccess) -> List[Dict[str, Any]]:
+    """
+    Fetches information about all games owned by a user from the Steam API.
+    
+    args:
+        stdscr: The curses window object.
+        steam_id: The Steam ID of the user.
+        init_data: A named tuple containing the Steam API object and the currency converter object.
+    
+    returns:
+        A json object containing game information.
+    """
+    stm = api_access.stm
+    c = api_access.c
     games = stm.users.get_owned_games(steam_id)
     
     liste_jeux: list[dict[str, Any]] = []
@@ -180,8 +280,14 @@ def all_games_info(stdscr, stm: steam.Steam, steam_id: str, c: CurrencyConverter
     return liste_jeux    
 
 # TODO : factorize the way to display each type of game stats
-def write_formated_stats_cache(cache_folder_name: str):
-    json_stats = get_cache_all_games_stats(cache_folder_name)
+def write_formated_stats_cache(user_cache_folder: str):
+    """
+    Computes and writes the full stats to a cache file.
+    
+    args:
+        user_cache_folder: The name of the cache folder for the user.
+    """
+    json_stats = get_cache_all_games_stats(user_cache_folder)
     liste_norm = []
     liste_playtime0 = []
     liste_prix_inconnus = []
@@ -242,7 +348,7 @@ def write_formated_stats_cache(cache_folder_name: str):
         liste_a_afficher[3].append([game["name"], "{:.2f}".format(game["playtime_forever"]/60)+"h", game["error"]])
         temps_total += game["playtime_forever"]
 
-    with open(f"{CACHE_FOLDER}/{cache_folder_name}/{FORMATED_STATS_FILE}", "w", encoding='utf-8') as f:
+    with open(f"{CACHE_FOLDER}/{user_cache_folder}/{FORMATED_STATS_FILE}", "w", encoding='utf-8') as f:
         if len(liste_prix_inconnus) > 0:
             f.write("Games which price is unknown\n")
             f.write(str(pd.DataFrame(liste_a_afficher[3], columns=["Name", "Playtime", "Reason"])))
@@ -266,8 +372,16 @@ def write_formated_stats_cache(cache_folder_name: str):
         f.write("Total playtime : " + "{:.2f}".format(temps_total/60) + "h\n")
         f.write("Total price : " + "{:.2f}".format(prix_total) + "€\n")
 
-# TODO : better display, feels to cramped + factorize with previous function
+# TODO : better display, feels too cramped + factorize with previous function
 def display_stats_for_one_game(stdscr, game_infos: List[Dict[str, Any]], selected: str):
+    """
+    Computes and displays the full stats for a single game from the cache.
+    
+    args:
+        stdscr: The curses window object.
+        game_infos: A json object containing the game stats.
+        selected: The name of the game.
+    """
     stdscr.clear()
     for game in game_infos:
         if game['name'] == selected:
@@ -303,7 +417,19 @@ def display_stats_for_one_game(stdscr, game_infos: List[Dict[str, Any]], selecte
     pass
 
 # TODO : factorize the way to update each type of game stats
-def update_info_game(game_infos: List[Dict[str, Any]], selected: str, name: str, steam_id: str, stm: steam.Steam, c: CurrencyConverter):
+def update_info_game(game_infos: List[Dict[str, Any]], selected: str, name: str, steam_id: str, api_access: ApiAccess):
+    """
+    Fetches and updates the stats for a single game in cache from the Steam API.
+    
+    args:
+        game_infos: A json object containing the game stats.
+        selected: The name of the game.
+        name: The name of the user.
+        steam_id: The Steam ID of the user.
+        init_data: A named tuple containing the Steam API object and the currency converter object.
+    """
+    stm = api_access.stm
+    c = api_access.c
     folder_cache_name = f'{name}_{steam_id}'
     games = stm.users.get_owned_games(steam_id)
     for game in games["games"]:
