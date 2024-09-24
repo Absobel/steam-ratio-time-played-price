@@ -22,8 +22,6 @@ FORMATED_STATS_FILE = 'formated_stats.txt'
 COUNTRY = "FR"
 RATIO_CIBLE = 25
 
-# TODO : Translate all of this in english
-
 # CURSES UTILS
 
 def choice(stdscr, options: List[str], title: str) -> int:
@@ -94,15 +92,30 @@ class InitData(NamedTuple):
     stm: steam.Steam
     c: CurrencyConverter
 
-def init() -> InitData:
-    # TODO : make the user enter the key if it's not in the .env file
-    KEY = config("STEAM_API_KEY")
+def init(stdscr) -> InitData:
+    KEY = get_key(stdscr)
     pd.set_option('display.max_rows', None)
     
-    stm = steam.Steam(KEY) # type: ignore
+    stm = steam.Steam(KEY)
     c = CurrencyConverter()
         
     return InitData(stm, c)
+
+def get_key(stdscr) -> str:
+    KEY = config("STEAM_API_KEY", default=None)
+    
+    if KEY is None:
+        stdscr.clear()
+        KEY = input_str(stdscr, 'Enter your Steam API key (https://steamcommunity.com/dev/apikey): ')
+        while len(KEY) != 32:
+            KEY = input_str(stdscr, 'Enter a valid key (https://steamcommunity.com/dev/apikey): ')
+    if not isinstance(KEY, str):
+        raise Exception(f"Invalid key: {KEY}")
+    
+    with open('.env', 'w') as f:
+        f.write(f'STEAM_API_KEY={KEY}\n')
+    
+    return KEY 
 
 def all_games_info(stdscr, stm: steam.Steam, steam_id: str, c: CurrencyConverter) -> List[Dict[str, Any]]:
     games = stm.users.get_owned_games(steam_id)
@@ -231,27 +244,27 @@ def write_formated_stats_cache(cache_folder_name: str):
 
     with open(f"{CACHE_FOLDER}/{cache_folder_name}/{FORMATED_STATS_FILE}", "w", encoding='utf-8') as f:
         if len(liste_prix_inconnus) > 0:
-            f.write("Jeux dont le prix est inconnu\n")
-            f.write(str(pd.DataFrame(liste_a_afficher[3], columns=["Nom", "Temps de jeu", "Raison"])))
+            f.write("Games which price is unknown\n")
+            f.write(str(pd.DataFrame(liste_a_afficher[3], columns=["Name", "Playtime", "Reason"])))
             f.write("\n\n")
         if len(liste_prix_gratuits) > 0:
             f.write("Jeux gratuits\n")
-            f.write(str(pd.DataFrame(liste_a_afficher[2], columns=["Nom", "Temps de jeu"])))
+            f.write(str(pd.DataFrame(liste_a_afficher[2], columns=["Name", "Playtime"])))
             f.write("\n\n")
         if len(liste_playtime0) > 0:
             f.write("Jeux non joués\n")
-            f.write(str(pd.DataFrame(liste_a_afficher[0], columns=["Nom", "Prix", "Temps de jeu visé"])))
+            f.write(str(pd.DataFrame(liste_a_afficher[0], columns=["Name", "Price", "Target playtime"])))
             f.write("\n\n")
         if len(liste_norm) > 0:
             f.write("Jeux joués\n")
-            f.write(str(pd.DataFrame(liste_a_afficher[1], columns=["Nom", "Temps de jeu", "Prix", "Ratio (min/€)", "Temps restant visé"])))
+            f.write(str(pd.DataFrame(liste_a_afficher[1], columns=["Name", "Playtime", "Price", "Ratio (min/€)", "Remaining playtime"])))
             f.write("\n\n")
 
-        f.write("Ratio moyen : " + "{:.2f}".format(stats.mean(liste_ratios)) + "\n")
-        f.write("Ratio médian : " + "{:.2f}".format(stats.median(liste_ratios)) + "\n")
+        f.write("Mean ratio : " + "{:.2f}".format(stats.mean(liste_ratios)) + "\n")
+        f.write("Median ratio : " + "{:.2f}".format(stats.median(liste_ratios)) + "\n")
         f.write("\n")
-        f.write("Temps total de jeu : " + "{:.2f}".format(temps_total/60) + "h\n")
-        f.write("Prix total : " + "{:.2f}".format(prix_total) + "€\n")
+        f.write("Total playtime : " + "{:.2f}".format(temps_total/60) + "h\n")
+        f.write("Total price : " + "{:.2f}".format(prix_total) + "€\n")
 
 # TODO : better display, feels to cramped + factorize with previous function
 def display_stats_for_one_game(stdscr, game_infos: List[Dict[str, Any]], selected: str):
@@ -337,7 +350,7 @@ def main(stdscr):
     script_dir = os.path.dirname(script_path)
     os.chdir(script_dir)
    
-    init_data = init()
+    init_data = init(stdscr)
     
     stdscr.clear()
 
@@ -375,8 +388,11 @@ def main(stdscr):
                     game_infos = get_cache_all_games_stats(cache_folder_name)
                     all_game_names = [game['name'] for game in game_infos]
                     selected = fzf.iterfzf(all_game_names)
-                    update_info_game(game_infos, selected, name, steam_id, init_data.stm, init_data.c)
-                    display_stats_for_one_game(stdscr, game_infos, selected)
+                    if isinstance(selected, str):
+                        update_info_game(game_infos, selected, name, steam_id, init_data.stm, init_data.c)
+                        display_stats_for_one_game(stdscr, game_infos, selected)
+                    else:
+                        stdscr.addstr('Problem with the game selection')
                 else:
                     stdscr.addstr('No cached data for this account. Please run "All Games" mode first.')
             case 'All Games':
